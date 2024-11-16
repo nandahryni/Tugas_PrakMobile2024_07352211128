@@ -1,0 +1,166 @@
+// ENUM ROLE
+// Mendefinisikan enum Role dengan dua nilai: Admin dan Customer
+enum Role { Admin, Customer }
+
+// Class untuk Product
+class Product {
+  String productName;
+  double price;
+  bool inStock;
+
+  Product({
+    required this.productName,
+    required this.price,
+    this.inStock = true,
+  });
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is Product &&
+          runtimeType == other.runtimeType &&
+          productName == other.productName;
+
+  @override
+  int get hashCode => productName.hashCode;
+}
+
+// Class dasar untuk User
+class User {
+  String name;
+  int age;
+  //LATE INITIALIZATION
+  // Menggunakan late untuk menandakan bahwa products akan diinisialisasi nanti
+  // setelah objek User dibuat
+  late List<Product> products;
+  
+  // === NULL SAFETY ===
+  // Menggunakan ? untuk menandakan bahwa role bisa bernilai null
+  Role? role;
+
+  User({
+    required this.name,
+    required this.age,
+  }) {
+    // Late initialization terjadi di sini
+    products = [];
+  }
+
+  void viewProducts() {
+    if (products.isEmpty) {
+      print('Tidak ada produk dalam daftar');
+      return;
+    }
+    print('\nDaftar Produk untuk $name:');
+    for (var product in products) {
+      print('- ${product.productName} (${product.price})');
+    }
+  }
+}
+
+// AdminUser class yang mewarisi User
+class AdminUser extends User {
+  AdminUser({required String name, required int age})
+      : super(name: name, age: age) {
+    role = Role.Admin;
+  }
+
+  void addProduct(Product product, Map<String, Product> productCatalog) {
+    //EXCEPTION HANDLING
+    // Menggunakan try-catch untuk menangani error saat menambah produk
+    try {
+      // Mengecek apakah produk tersedia dalam stok
+      if (!product.inStock) {
+        // Melempar exception jika produk tidak tersedia
+        throw Exception('Produk tidak tersedia dalam stok!');
+      }
+      products.add(product);
+      productCatalog[product.productName] = product;
+      print('Produk ${product.productName} berhasil ditambahkan');
+    } catch (e) {
+      // Menangkap dan menampilkan pesan error
+      print('Error: $e');
+    }
+  }
+
+  void removeProduct(Product product, Map<String, Product> productCatalog) {
+    products.remove(product);
+    productCatalog.remove(product.productName);
+    print('Produk ${product.productName} berhasil dihapus');
+  }
+}
+
+// CustomerUser class yang mewarisi User
+class CustomerUser extends User {
+  CustomerUser({required String name, required int age})
+      : super(name: name, age: age) {
+    role = Role.Customer;
+  }
+}
+
+// Function untuk simulasi fetch data
+Future<Product> fetchProductDetails(String productName) async {
+  await Future.delayed(Duration(seconds: 2));
+  return Product(
+    productName: productName,
+    price: 99.99,
+    inStock: true,
+  );
+}
+
+void main() async {
+  // Membuat catalog produk menggunakan Map
+  Map<String, Product> productCatalog = {};
+  
+  // Membuat Set untuk produk unik
+  Set<Product> uniqueProducts = {};
+
+  // Membuat admin dan customer
+  var admin = AdminUser(name: 'Admin1', age: 30);
+  var customer = CustomerUser(name: 'Customer1', age: 25);
+
+  // Menambahkan beberapa produk
+  print('\nMenambahkan produk...');
+  var product1 = await fetchProductDetails('Laptop');
+  var product2 = await fetchProductDetails('Smartphone');
+  // Membuat produk yang tidak tersedia dalam stok untuk menguji exception handling
+  var product3 = Product(
+    productName: 'Tablet',
+    price: 299.99,
+    inStock: false,  // Produk tidak tersedia
+  );
+
+  // Admin menambahkan produk
+  admin.addProduct(product1, productCatalog);
+  admin.addProduct(product2, productCatalog);
+  //EXCEPTION HANDLING TEST
+  // Ini akan menghasilkan error karena produk tidak tersedia dalam stok
+  admin.addProduct(product3, productCatalog);
+
+  // Menambahkan ke Set untuk memastikan keunikan
+  uniqueProducts.add(product1);
+  uniqueProducts.add(product2);
+  // Mencoba menambahkan produk yang sama
+  uniqueProducts.add(Product(productName: 'Laptop', price: 999.99));
+
+  // Melihat daftar produk
+  print('\nDaftar produk dalam catalog:');
+  productCatalog.forEach((key, value) {
+    print('$key: \$${value.price}');
+  });
+
+  print('\nJumlah produk unik: ${uniqueProducts.length}');
+
+  // Customer melihat produk
+  customer.viewProducts();
+  
+  // Admin menghapus produk
+  print('\nMenghapus produk...');
+  admin.removeProduct(product1, productCatalog);
+
+  // Melihat daftar produk setelah penghapusan
+  print('\nDaftar produk setelah penghapusan:');
+  productCatalog.forEach((key, value) {
+    print('$key: \$${value.price}');
+  });
+}
