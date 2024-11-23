@@ -1,0 +1,142 @@
+import 'package:flutter/material.dart';
+import '../models/book_models.dart';
+import '../services/api_service.dart';
+
+class AddEditBookScreen extends StatefulWidget {
+  final Book? book;
+
+  const AddEditBookScreen({Key? key, this.book}) : super(key: key);
+
+  @override
+  _AddEditBookScreenState createState() => _AddEditBookScreenState();
+}
+
+class _AddEditBookScreenState extends State<AddEditBookScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _apiService = ApiService();
+
+  late TextEditingController _titleController;
+  late TextEditingController _authorController;
+  late TextEditingController _descriptionController;
+
+  @override
+  void initState() {
+    super.initState();
+    // Safe null handling with null-aware operators
+    _titleController = TextEditingController(text: widget.book?.title ?? '');
+    _authorController = TextEditingController(text: widget.book?.author ?? '');
+    _descriptionController =
+        TextEditingController(text: widget.book?.description ?? '');
+  }
+
+  Future<void> _saveBook() async {
+    if (_formKey.currentState!.validate()) {
+      try {
+        final book = Book(
+          id: widget.book?.id, // Include id in the constructor
+          title: _titleController.text.trim(),
+          author: _authorController.text.trim(),
+          description: _descriptionController.text.trim(),
+        );
+
+        if (widget.book?.id != null) {
+          // Ensure id exists before updating
+          await _apiService.updateBook(widget.book!.id!, book);
+        } else {
+          await _apiService.addBook(book);
+        }
+
+        if (mounted) {
+          // Check if widget is still mounted
+          Navigator.pop(context, true);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Book saved successfully')),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error: ${e.toString()}')),
+          );
+        }
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(widget.book == null ? 'Add Book' : 'Edit Book'),
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            children: [
+              TextFormField(
+                controller: _titleController,
+                decoration: const InputDecoration(
+                  labelText: 'Title',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Please enter a title';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _authorController,
+                decoration: const InputDecoration(
+                  labelText: 'Author',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Please enter an author';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _descriptionController,
+                decoration: const InputDecoration(
+                  labelText: 'Description',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 3,
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Please enter a description';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: _saveBook,
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 48),
+                ),
+                child: const Text('Save'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _authorController.dispose();
+    _descriptionController.dispose();
+    super.dispose();
+  }
+}
